@@ -15,6 +15,7 @@ This (rather large) goal can be broken down into several smaller goals:
 # How to run it
 
 ```
+conda activate habitat
 python example.py
 ```
 
