@@ -10,3 +10,7 @@ This (rather large) goal can be broken down into several smaller goals:
     - Needs to convert a 5 DoF position/viewing to an image
     - Can be done through [NeRFs](https://www.matthewtancik.com/nerf)
     - We (i.e. Noisebridge) also have a GitLab with a [3D model of Noisebridge](https://gitlab.com/unityversity/simbridge) , no idea how to convert this to the format above
+
+# TODO
+
+- Create an environment file for Noisebridge environment
