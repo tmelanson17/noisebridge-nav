@@ -1,4 +1,5 @@
 # noisebridge-nav
+
 Creating an E2E AI for navigating an indoor environment.
 
 The goal is to create a robot that can navigate an indoor space. Although the original idea is something that can fetch an object or look for things in a space, we will focus on image or location-based navigation for the time being. 
