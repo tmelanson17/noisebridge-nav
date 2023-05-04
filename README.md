@@ -12,6 +12,14 @@ This (rather large) goal can be broken down into several smaller goals:
     - Can be done through [NeRFs](https://www.matthewtancik.com/nerf)
     - We (i.e. Noisebridge) also have a GitLab with a [3D model of Noisebridge](https://gitlab.com/unityversity/simbridge) , no idea how to convert this to the format above
 
+# How to run it
+
+```
+python example.py
+```
+
+Currently set up to work on renderbox
+
 # TODO
 
 - Create an environment file for Noisebridge environment
