@@ -1,11 +1,12 @@
 #include <cstdio>
+#include <iostream>
 #include <vector>
 #include <memory>
 
 #include <cppgpio.hpp>
 
 #include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/string.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 
 // TODO : Make this configurable
 
@@ -35,30 +36,50 @@ class MinimalSubscriber : public rclcpp::Node
     MinimalSubscriber()
       : Node("minimal_subscriber") 
     {
-        subscription_ = this->create_subscription<std_msgs::msg::String>(
-        "topic", 10, std::bind(&MinimalSubscriber::topic_callback, this, _1));
+        subscription_ = this->create_subscription<geometry_msgs::msg::Twist>(
+        "/cmd_vel", 10, std::bind(&MinimalSubscriber::driveCallback, this, _1));
         for (const size_t pin : PINS) {
     		pins_.push_back(GPIO::DigitalOut(pin));
         }
+	currentDrive_ = Drive::STOP;
 
     }
     private:
-    void setPins(Drive signal) {
-		for (size_t i = 0; i < 4; ++i) {
-			if (PINS_CONFIG[size_t(signal)][i]) {
-				pins_[i].on();
-			} else {
-				pins_[i].off();
-			}
-		}
-	}
-
-    void topic_callback(const std_msgs::msg::String & msg) const
-    {
-      RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg.data.c_str());
+    void setPins(const Drive signal) { 
+	    if (signal != currentDrive_) {
+		    std::cout << "Signal: " << signal << std::endl;
+		    for (size_t i = 0; i < 4; ++i) { 
+			    if (PINS_CONFIG[size_t(signal)][i]) { 
+				    pins_[i].on(); 
+			    } else { 
+				    pins_[i].off(); 
+			    } 
+		    } 
+		    currentDrive_ = signal;
+	    }
     }
-    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
-	std::vector<GPIO::DigitalOut> pins_;
+
+    void driveCallback(const geometry_msgs::msg::Twist & msg) 
+    {
+	    // Has to be one of 4 : fwd, backward, left, right
+	    const float LINEAR_THRESHOLD = 0.05f;
+	    const float ANGULAR_THRESHOLD = 0.2f;
+	    if (msg.linear.x > LINEAR_THRESHOLD) {
+		    setPins(Drive::FORWARD);
+	    } else if (msg.linear.x < -LINEAR_THRESHOLD) {
+		    setPins(Drive::BACKWARD);
+	    } else if (msg.angular.z > ANGULAR_THRESHOLD) {
+		    setPins(Drive::LEFT_TURN);
+	    } else if (msg.angular.z < -ANGULAR_THRESHOLD) {
+		    setPins(Drive::RIGHT_TURN);
+	    } else {
+		    setPins(Drive::STOP);
+	    }
+    }
+    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_;
+    std::vector<GPIO::DigitalOut> pins_;
+    Drive currentDrive_;
+
 };
 
 int main(int argc, char * argv[])
