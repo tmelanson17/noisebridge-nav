@@ -3,21 +3,23 @@
 #include <vector>
 #include <memory>
 
-#include <cppgpio.hpp>
+#include <wiringPi.h>
 
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 
 // TODO : Make this configurable
+// See https://pinout.xyz/pinout/wiringpi# for pin remapping
 
-const std::vector<size_t> PINS = {3, 8, 5, 10};
+// const std::vector<size_t> PINS = {3, 8, 5, 10};
+const std::vector<size_t> PINS = {2, 3, 0, 1};
 
 const size_t PINS_CONFIG[][4] = {
-		{true, false, true, false},
-		{true, false, false, true},
-		{false, true, true, false},
-		{false, false, false, false},
-		{false, true, false, true},
+		{1, 0, 1, 0},
+		{1, 0, 0, 1},
+		{0, 1, 1, 0},
+		{0, 0, 0, 0},
+		{0, 1, 0, 1},
 };
 
 enum Drive {
@@ -31,29 +33,37 @@ enum Drive {
 using std::placeholders::_1;
 
 class MinimalSubscriber : public rclcpp::Node
-{
+{	
+    using FdGpio = int;
+    static constexpr int LFLAGS = 0;
+    static constexpr int OUT = 21;
+
     public:
     MinimalSubscriber()
       : Node("minimal_subscriber") 
     {
         subscription_ = this->create_subscription<geometry_msgs::msg::Twist>(
         "/cmd_vel", 10, std::bind(&MinimalSubscriber::driveCallback, this, _1));
+	wiringPiSetup();
         for (const size_t pin : PINS) {
-    		pins_.push_back(GPIO::DigitalOut(pin));
+    		// pins_.push_back(lgGpioClaimOutput(pin, LFLAGS, OUT, 0));
+		pins_.push_back(pin);
+		pinMode(pin, OUTPUT);
         }
 	currentDrive_ = Drive::STOP;
+	setPins(Drive::STOP);
+	initialized_ = true;
 
     }
+
+    ~MinimalSubscriber() {}
     private:
     void setPins(const Drive signal) { 
-	    if (signal != currentDrive_) {
+	    if (initialized_ && signal != currentDrive_) {
 		    std::cout << "Signal: " << signal << std::endl;
 		    for (size_t i = 0; i < 4; ++i) { 
-			    if (PINS_CONFIG[size_t(signal)][i]) { 
-				    pins_[i].on(); 
-			    } else { 
-				    pins_[i].off(); 
-			    } 
+			    size_t pinOut = PINS_CONFIG[size_t(signal)][i]; 
+			    digitalWrite(pins_[i], pinOut);
 		    } 
 		    currentDrive_ = signal;
 	    }
@@ -77,8 +87,9 @@ class MinimalSubscriber : public rclcpp::Node
 	    }
     }
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_;
-    std::vector<GPIO::DigitalOut> pins_;
+    std::vector<FdGpio> pins_;
     Drive currentDrive_;
+    bool initialized_=false;
 
 };
 
