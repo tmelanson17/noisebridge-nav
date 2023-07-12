@@ -20,13 +20,15 @@ find_package(image_transport REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(Threads REQUIRED)
-find_package(apriltag 3.2 REQUIRED)
+find_package(apriltag REQUIRED)
+find_package(OpenCV REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-add_executable(estimate_pose src/estimate_pose.cpp)
-ament_target_dependencies(estimate_pose rclcpp rclcpp_components sensor_msgs tf2_ros image_transport cv_bridge)
+add_executable(estimate_pose src/estimate_pose.cpp src/test_apriltags.cpp)
+target_link_libraries(estimate_pose apriltag::apriltag)
+ament_target_dependencies(estimate_pose rclcpp rclcpp_components sensor_msgs tf2_ros image_transport cv_bridge OpenCV)
 target_include_directories(estimate_pose PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
