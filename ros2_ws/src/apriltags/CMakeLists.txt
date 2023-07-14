@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.8)
 project(apriltags)
 
-set(CMAKE_PREFIX_PATH "/usr/local/lib")
+# set(CMAKE_PREFIX_PATH "/usr/local/lib")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Werror -Wall -Wextra -Wpedantic)
   add_link_options("-Wl,-z,relro,-z,now,-z,defs")
