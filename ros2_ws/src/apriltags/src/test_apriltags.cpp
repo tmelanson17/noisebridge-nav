@@ -33,6 +33,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 
 extern "C" {
 #include <apriltag/apriltag.h>
+#include <apriltag/apriltag_pose.h>
 #include <apriltag/tag36h11.h>
 #include <apriltag/tag25h9.h>
 #include <apriltag/tag16h5.h>
@@ -71,6 +72,7 @@ int main(int argc, char *argv[])
 
 
     const char *file = getopt_get_string(getopt, "file");
+
 
     // Initialize tag detector with options
     apriltag_family_t *tf = NULL;
@@ -115,9 +117,11 @@ int main(int argc, char *argv[])
 
     Mat frame, gray;
     frame = imread(file);
+    resize(frame, frame, Size(), 2.0, 2.0);
     while (true) {
         errno = 0;
         cvtColor(frame, gray, COLOR_BGR2GRAY);
+	// resize(gray_smol, gray, Size(), 2.0, 2.0); 
 
         // Make an image_u8_t header for the Mat data
         image_u8_t im = {
@@ -151,17 +155,33 @@ int main(int argc, char *argv[])
                      Point(det->p[3][0], det->p[3][1]),
                      Scalar(0xff, 0, 0), 2);
 
-            stringstream ss;
-            ss << det->id;
-            String text = ss.str();
+            //ss << det->id;
+	    // First create an apriltag_detection_info_t struct using your known parameters.
+	    apriltag_detection_info_t info;
+      	    info.det = det;
+	    info.tagsize = 100;
+	    // TODO: Fill in these with actual params
+	    info.fx = 100;
+	    info.fy = 100;
+	    info.cx = 100;
+	    info.cy = 100;
+
+	    // Then call estimate_tag_pose.
+	    apriltag_pose_t pose;
+	    (double) estimate_tag_pose(&info, &pose);
             int fontface = FONT_HERSHEY_SCRIPT_SIMPLEX;
-            double fontscale = 1.0;
+            double fontscale = 0.9;
             int baseline;
-            Size textsize = getTextSize(text, fontface, fontscale, 2,
-                                            &baseline);
-            putText(frame, text, Point(det->c[0]-textsize.width/2,
-                                       det->c[1]+textsize.height/2),
-                    fontface, fontscale, Scalar(0xff, 0x99, 0), 2);
+	    for (int i = 0; i <= 2; i++) {
+		    stringstream ss;
+		    ss << pose.t->data[i];
+		    String text = ss.str();
+		    Size textsize = getTextSize(text, fontface, fontscale, 2,
+						    &baseline);
+		    putText(frame, text, Point(det->c[0]-textsize.width/2,
+					       det->c[1]+3*i*textsize.height/2),
+			    fontface, fontscale, Scalar(0xff, 0x99, 0), 2);
+	    }
         }
         apriltag_detections_destroy(detections);
 
