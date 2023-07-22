@@ -12,6 +12,8 @@
 // See https://pinout.xyz/pinout/wiringpi# for pin remapping
 
 // const std::vector<size_t> PINS = {3, 8, 5, 10};
+// Left motor red wire to OUT1
+// Right motor red wire to OUT2
 const std::vector<size_t> PINS = {2, 3, 0, 1};
 
 const size_t PINS_CONFIG[][4] = {
