@@ -16,21 +16,47 @@
 #include <opencv2/highgui.hpp>
 // -----------------------
 
+#include <yaml-cpp/yaml.h>
+
+// TODO: Remove cv namespace
 using namespace cv;
+
+std::string Mat2Str(const Mat& input) {
+    cv::Mat oneRow = input.reshape(0, 1);    // Treat as vector
+    std::ostringstream os;
+    os << oneRow;                             // Put to the stream
+    std::string asStr = os.str();             // Get string
+    asStr.pop_back();                         // Remove brackets
+    asStr.erase(0,1);
+    return asStr;
+}
+
+
+// Collection of camera parameters to make organization easier.
+struct CameraParameters {
+    Mat cameraMatrix;
+    Mat distCoeffs;
+    Mat R;
+    Mat t;
+};
+
 
 // TODO: fix corrupted unsorted chunks issue
 // TODO: why is this so slow?
 class CalibrationNode : public rclcpp::Node
 {
+    static constexpr size_t N_CALIBRATION_POINTS = 8;
     public:
     CalibrationNode()
-      : Node("calibration")
+      : Node("calibration"),
+	_boardSize(9, 6)
     {
 	it = std::unique_ptr<image_transport::ImageTransport>(
 			new image_transport::ImageTransport(rclcpp::Node::SharedPtr(this))
 	);
 	sub = it->subscribeCamera("/image_raw", 10, std::bind(&CalibrationNode::_drawChessboardCorners, this, std::placeholders::_1, std::placeholders::_2));
 	pub = it->advertise("/image_with_chessboard", 10);
+	_createObjectPoints();
     }
 
     ~CalibrationNode() {
@@ -38,6 +64,14 @@ class CalibrationNode : public rclcpp::Node
 
 
     private:
+    // TODO: update this so that this is constexpr
+    void _createObjectPoints() {
+       for(int i = 0; i<_boardSize.height; i++) {
+           for(int j = 0; j<_boardSize.width; j++) {
+               _chessboardPoints.push_back(Point3f(j,i,0));
+	   }
+       }
+    }
 
     void _drawChessboardCorners(const sensor_msgs::msg::Image::ConstSharedPtr& msg, const sensor_msgs::msg::CameraInfo::ConstSharedPtr& info) {
         (void)info;
@@ -53,11 +87,10 @@ class CalibrationNode : public rclcpp::Node
 	// Mat view;
 	// resize(viewBig, view, Size(msg->height, msg->width));
 	// TODO: Get board size (width, height)
-	Size boardSize(9, 6);
 	int winSize = 10;
 	std::vector<Point2f> pointBuf;
         int chessBoardFlags = CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE;
-	bool found = findChessboardCorners(view, boardSize, pointBuf, chessBoardFlags);
+	bool found = findChessboardCorners(view, _boardSize, pointBuf, chessBoardFlags);
 	if (found) {
 	    std::cout << "Chessboard corners found!" << std::endl;
             // improve the found corners' coordinate accuracy for chessboard
@@ -68,7 +101,14 @@ class CalibrationNode : public rclcpp::Node
             cornerSubPix( viewGray, pointBuf, Size(winSize,winSize),
             Size(-1,-1), TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 30, 0.0001 ));
             // Draw the corners.
-            drawChessboardCorners( view, boardSize, Mat(pointBuf), found );
+            drawChessboardCorners( view, _boardSize, Mat(pointBuf), found );
+	    if (_objectPoints.size() < N_CALIBRATION_POINTS) {
+	        _objectPoints.push_back(_chessboardPoints);
+	        _imgPoints.push_back(pointBuf);
+	    }
+	    if (_objectPoints.size() == N_CALIBRATION_POINTS) {
+	        _calibrate(Size(viewGray.rows, viewGray.cols));
+	    }
         }
 
 	// Publish as ImageTransport
@@ -81,9 +121,36 @@ class CalibrationNode : public rclcpp::Node
 	pub.publish(img_msg);
         
     }
+
+    void _calibrate(const Size& imgSize) {
+        /*
+         * Performing camera calibration by
+         * passing the value of known 3D points (objpoints)
+         * and corresponding pixel coordinates of the
+         * detected corners (imgPoints)
+        */
+        cv::calibrateCamera(_objectPoints, _imgPoints, imgSize, _params.cameraMatrix, _params.distCoeffs, _params.R, _params.t);
+	std::cout << "Calibration completed!" << std::endl;
+
+	// TODO: Make this compile
+	// YAML::Emitter out;
+	// out << YAML::BeginMap;
+	// out << YAML::Key << "K";
+	// out << YAML::Key << "distCoeff";
+	// out << YAML::Key << "R";
+	// out << YAML::Key << "t";
+	std::cout << Mat2Str(_params.cameraMatrix) << std::endl;
+    }
+
     std::unique_ptr<image_transport::ImageTransport> it;
     image_transport::CameraSubscriber sub;
     image_transport::Publisher pub;
+    // TODO: Make this const
+    std::vector<Point3f> _chessboardPoints;
+    Size _boardSize;
+    std::vector<std::vector<Point3f> > _objectPoints;
+    std::vector<std::vector<Point2f> > _imgPoints;
+    CameraParameters _params;
 };
 
 int main(int argc, char ** argv)

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.8)
 project(calibration)
 
+# TODO : Update to use C++20
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -13,12 +15,14 @@ find_package(ament_cmake REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(yaml-cpp REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
 add_executable(calibration src/calibration_node.cpp)
-ament_target_dependencies(calibration rclcpp rclcpp_components sensor_msgs image_transport cv_bridge OpenCV)
+ament_target_dependencies(calibration rclcpp rclcpp_components sensor_msgs image_transport cv_bridge OpenCV yaml-cpp)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
