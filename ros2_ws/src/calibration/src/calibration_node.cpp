@@ -133,12 +133,12 @@ class CalibrationNode : public rclcpp::Node
 	std::cout << "Calibration completed!" << std::endl;
 
 	// TODO: Make this compile
-	// YAML::Emitter out;
-	// out << YAML::BeginMap;
-	// out << YAML::Key << "K";
-	// out << YAML::Key << "distCoeff";
-	// out << YAML::Key << "R";
-	// out << YAML::Key << "t";
+	YAML::Emitter out;
+	out << YAML::BeginMap;
+	out << YAML::Key << "K";
+	out << YAML::Key << "distCoeff";
+	out << YAML::Key << "R";
+	out << YAML::Key << "t";
 	std::cout << Mat2Str(_params.cameraMatrix) << std::endl;
     }
 

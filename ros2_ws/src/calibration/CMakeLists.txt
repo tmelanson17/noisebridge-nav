@@ -15,13 +15,16 @@ find_package(ament_cmake REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV REQUIRED)
-find_package(yaml-cpp REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+# find the yaml-cpp include directory
+find_package(yaml-cpp REQUIRED)
+
 
 add_executable(calibration src/calibration_node.cpp)
 ament_target_dependencies(calibration rclcpp rclcpp_components sensor_msgs image_transport cv_bridge OpenCV yaml-cpp)
+target_link_libraries(calibration ${YAML_CPP_LIBRARIES})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
