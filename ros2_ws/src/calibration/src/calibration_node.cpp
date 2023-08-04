@@ -1,5 +1,7 @@
 #include <cstdio>
 #include <vector>
+#include <iostream>
+#include <fstream>
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -136,10 +138,18 @@ class CalibrationNode : public rclcpp::Node
 	YAML::Emitter out;
 	out << YAML::BeginMap;
 	out << YAML::Key << "K";
+	out << YAML::Value << Mat2Str(_params.cameraMatrix);
 	out << YAML::Key << "distCoeff";
+	out << YAML::Value << Mat2Str(_params.distCoeffs);
 	out << YAML::Key << "R";
+	out << YAML::Value << Mat2Str(_params.R);
 	out << YAML::Key << "t";
-	std::cout << Mat2Str(_params.cameraMatrix) << std::endl;
+	out << YAML::Value << Mat2Str(_params.t);
+	out << YAML::EndMap;
+
+	std::cout << out.c_str() << std::endl;
+	std::ofstream fout("config.yaml");
+        fout << out.c_str();
     }
 
     std::unique_ptr<image_transport::ImageTransport> it;
