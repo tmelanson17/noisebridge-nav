@@ -48,6 +48,7 @@ struct CameraParameters {
 class CalibrationNode : public rclcpp::Node
 {
     static constexpr size_t N_CALIBRATION_POINTS = 8;
+    static constexpr int SQUARE_SIZE = 2; // cm, approximate
     public:
     CalibrationNode()
       : Node("calibration"),
@@ -70,7 +71,8 @@ class CalibrationNode : public rclcpp::Node
     void _createObjectPoints() {
        for(int i = 0; i<_boardSize.height; i++) {
            for(int j = 0; j<_boardSize.width; j++) {
-               _chessboardPoints.push_back(Point3f(j,i,0));
+               _chessboardPoints.push_back(
+			       Point3f(SQUARE_SIZE*j,SQUARE_SIZE*i,0));
 	   }
        }
     }
