@@ -1,0 +1,90 @@
+import sys
+import os
+import queue
+import rclpy
+import redis
+import cv2
+import PIL
+import numpy as np
+
+from rclpy.node import Node
+from sensor_msgs import msg
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+
+from os2d.inference import OS2DDetector
+
+
+class CameraImageSubscriber(Node):
+    def __init__(self):
+        super().__init__("camera_subscriber")
+        self._redis_db = redis.StrictRedis(host="localhost", port="6379", db="0")
+        self.image_queue = queue.Queue()
+        self.subscription = self.create_subscription(
+            msg.Image, "/oakd/rgb/preview/image_raw", self.listener_callback, 10
+        )
+        self.subscription
+        self.model = OS2DDetector()
+
+    def _imgmsg_to_cv2(self, img_msg):
+        n_channels = 3
+        dtype = np.dtype("uint8")
+        dtype = dtype.newbyteorder(">" if img_msg.is_bigendian else "<")
+
+        img_buf = (
+            np.asarray(img_msg.data, dtype=dtype)
+            if isinstance(img_msg.data, list)
+            else img_msg.data
+        )
+        im = np.ndarray(
+            shape=(
+                img_msg.height,
+                int(img_msg.step / dtype.itemsize / n_channels),
+                n_channels,
+            ),
+            dtype=dtype,
+            buffer=img_buf,
+        )
+        im = np.ascontiguousarray(im[: img_msg.height, : img_msg.width, :])
+
+        if img_msg.is_bigendian == (sys.byteorder == "little"):
+            im = im.byteswap().newbyteorder()
+
+        return im
+
+    def listener_callback(self, msg):
+        image = self._imgmsg_to_cv2(msg)
+        im_h, im_w, _ = image.shape
+
+        res = self.model.predict(PIL.Image.fromarray(image))
+
+        boxes = [
+            [
+                (int(box[0] * im_w), int(box[1] * im_h)),
+                (int(box[2] * im_w), int(box[3] * im_h)),
+            ]
+            for box in res["bboxes"]
+        ]
+        for box in boxes:
+            image = cv2.rectangle(image, box[0], box[1], (255, 0, 0), 2)
+
+        cv2.imshow("video", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+        cv2.waitKey(1)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    minimal_subscriber = CameraImageSubscriber()
+
+    rclpy.spin(minimal_subscriber)
+
+    # Destroy the node explicitly
+    # (optional - otherwise it will be done automatically
+    # when the garbage collector destroys the node object)
+    minimal_subscriber.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
