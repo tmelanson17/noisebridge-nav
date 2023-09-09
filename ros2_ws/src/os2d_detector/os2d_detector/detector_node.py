@@ -2,10 +2,10 @@ import sys
 import os
 import queue
 import rclpy
-import redis
 import cv2
 import PIL
 import numpy as np
+import cv_bridge
 
 from rclpy.node import Node
 from sensor_msgs import msg
@@ -18,13 +18,16 @@ from os2d.inference import OS2DDetector
 class CameraImageSubscriber(Node):
     def __init__(self):
         super().__init__("camera_subscriber")
-        self._redis_db = redis.StrictRedis(host="localhost", port="6379", db="0")
         self.image_queue = queue.Queue()
         self.subscription = self.create_subscription(
             msg.Image, "/oakd/rgb/preview/image_raw", self.listener_callback, 10
         )
         self.subscription
+        self.publisher = self.create_publisher(
+            msg.Image, "/os2d/detection_output", 10
+        )
         self.model = OS2DDetector()
+        self.bridge = cv_bridge.CvBridge()
 
     def _imgmsg_to_cv2(self, img_msg):
         n_channels = 3
@@ -56,20 +59,22 @@ class CameraImageSubscriber(Node):
         image = self._imgmsg_to_cv2(msg)
         im_h, im_w, _ = image.shape
 
-        res = self.model.predict(PIL.Image.fromarray(image))
+        # res = self.model.predict(PIL.Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)))
 
-        boxes = [
-            [
-                (int(box[0] * im_w), int(box[1] * im_h)),
-                (int(box[2] * im_w), int(box[3] * im_h)),
-            ]
-            for box in res["bboxes"]
-        ]
-        for box in boxes:
-            image = cv2.rectangle(image, box[0], box[1], (255, 0, 0), 2)
+        # boxes = [
+        #     [
+        #         (int(box[0] * im_w), int(box[1] * im_h)),
+        #         (int(box[2] * im_w), int(box[3] * im_h)),
+        #     ]
+        #     for box in res["bboxes"]
+        # ]
+        # for box in boxes:
+        #     image = cv2.rectangle(image, box[0], box[1], (255, 0, 0), 2)
+        # Random rectangle added for timing purposes
+        image = cv2.rectangle(image, (0,0),(50,50),(255,0,0),2)
 
-        cv2.imshow("video", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-        cv2.waitKey(1)
+        self.publisher.publish(self.bridge.cv2_to_imgmsg(image, "bgr8"))
+        
 
 
 def main(args=None):

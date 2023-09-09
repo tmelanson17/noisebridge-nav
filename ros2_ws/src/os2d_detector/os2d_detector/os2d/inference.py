@@ -16,7 +16,7 @@ DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 class OS2DDetector:
     def __init__(self):
         cfg.visualization.eval.max_detections = 30
-        cfg.visualization.eval.score_threshold = 0.60
+        cfg.visualization.eval.score_threshold = 0.55
         cfg.is_cuda = torch.cuda.is_available()
 
         if cfg.is_cuda:
